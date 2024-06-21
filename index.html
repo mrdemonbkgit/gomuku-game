@@ -8,14 +8,20 @@
 </head>
 <body>
     <div class="game-container">
+        <div class="game-controls">
+            <button id="reset-btn" class="control-btn">New Game</button>
+            <div class="ai-toggle-container">
+                <label class="switch">
+                    <input type="checkbox" id="ai-toggle">
+                    <span class="slider round"></span>
+                </label>
+                <span class="ai-label">Play vs AI</span>
+            </div>
+            <div id="board-evaluation" class="evaluation">Board Evaluation: 0</div>
+        </div>
         <div id="board"></div>
     </div>
-    <div class="game-controls">
-        <button id="reset-btn">Reset Game</button>
-        <label>
-            <input type="checkbox" id="ai-toggle"> Play against AI
-        </label>
-    </div>
+    
     <script src="script.js"></script>
 </body>
 </html>

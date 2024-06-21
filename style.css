@@ -5,22 +5,17 @@ body {
     height: 100vh;
     margin: 0;
     background-color: #e0d0b5;
+    font-family: Arial, sans-serif;
 }
 
 .game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 20px;
     background-color: #dcb35c;
     border-radius: 10px;
     box-shadow: 0 0 20px rgba(0,0,0,0.3);
-}
-
-#board {
-    display: grid;
-    grid-template-columns: repeat(15, 1fr);
-    gap: 0;
-    background-color: #dcb35c;
-    padding: 10px;
-    position: relative;
 }
 
 .cell {
@@ -28,6 +23,7 @@ body {
     height: 40px;
     position: relative;
     cursor: pointer;
+    background-color: transparent;
 }
 
 /* Horizontal grid lines */
@@ -37,7 +33,7 @@ body {
     top: 50%;
     left: -50%;
     right: -50%;
-    height: 2px;
+    height: 1px;
     background-color: #000;
     z-index: 1;
 }
@@ -49,7 +45,7 @@ body {
     left: 50%;
     top: -50%;
     bottom: -50%;
-    width: 2px;
+    width: 1px;
     background-color: #000;
     z-index: 1;
 }
@@ -62,7 +58,7 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 2;
+    z-index: 3;
     transition: box-shadow 0.3s ease;
 }
 
@@ -122,19 +118,7 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 3;
-}
-
-/* Add border to the board */
-#board::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border: 2px solid #000;
-    pointer-events: none;
+    z-index: 2;
 }
 
 @keyframes glow {
@@ -170,15 +154,129 @@ body {
 }
 
 .game-controls {
-    margin-top: 20px;
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
     align-items: center;
-    gap: 20px;
+    width: 100%;
+    margin-bottom: 20px;
+    padding: 15px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.control-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    color: white;
+    background-color: #4CAF50;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.control-btn:hover {
+    background-color: #45a049;
+}
+
+.ai-toggle-container {
+    display: flex;
+    align-items: center;
 }
 
 #reset-btn {
     padding: 10px 20px;
     font-size: 16px;
     cursor: pointer;
+}
+
+#board-evaluation {
+    margin-top: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #2196F3;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+.ai-label {
+    margin-left: 10px;
+    font-size: 16px;
+}
+
+.evaluation {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(15, 1fr);
+    gap: 0;
+    background-color: #dcb35c; /* Wooden color */
+    padding: 10px;
+    position: relative;
+}
+
+/* Add border to the board */
+#board::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid #000;
+    pointer-events: none;
+    z-index: 2;
 }

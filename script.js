@@ -102,6 +102,9 @@ function placeStone(row, col) {
     stone.classList.add('last-move');
     lastMoveStone = stone;
 
+    // Update board evaluation
+    updateBoardEvaluation();
+
     if (checkWin(row, col)) {
         setTimeout(() => {
             alert(`Player ${currentPlayer === BLACK ? 'Black' : 'White'} wins!`);
@@ -286,6 +289,21 @@ function hasAdjacentStone(row, col) {
     return false;
 }
 
+function updateBoardEvaluation() {
+    const evaluation = evaluateBoard();
+    const evaluationElement = document.getElementById('board-evaluation');
+    evaluationElement.textContent = `Board Evaluation: ${evaluation}`;
+    
+    // Add color coding for easier interpretation
+    if (evaluation > 0) {
+        evaluationElement.style.color = 'green';
+    } else if (evaluation < 0) {
+        evaluationElement.style.color = 'red';
+    } else {
+        evaluationElement.style.color = 'black';
+    }
+}
+
 function checkWin(row, col) {
     const directions = [
         [1, 0],  // horizontal
@@ -334,6 +352,8 @@ function resetGame() {
         lastMoveStone.classList.remove('last-move');
     }
     lastMoveStone = null;
+
+    updateBoardEvaluation();
 
     if (isAIMode && currentPlayer === WHITE) {
         setTimeout(makeAIMove, 500);
