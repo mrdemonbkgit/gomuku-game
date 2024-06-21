@@ -169,3 +169,16 @@ body {
     border: 1px solid #000;
 }
 
+.game-controls {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+}
+
+#reset-btn {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
