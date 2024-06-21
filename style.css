@@ -280,3 +280,63 @@ input:checked + .slider:before {
     pointer-events: none;
     z-index: 2;
 }
+
+.color-toggle-container {
+    display: flex;
+    align-items: center;
+    margin-left: 20px;
+}
+
+.color-label {
+    margin-left: 10px;
+    font-size: 16px;
+}
+
+.color-select-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.color-select-container label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.color-select-container input[type="radio"] {
+    margin: 0;
+}
+
+/* Add this new CSS section for the log */
+.board-log-container {
+    display: flex;
+    gap: 20px;
+}
+
+#game-log {
+    width: 200px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 10px;
+    overflow-y: auto;
+    max-height: 80vh;
+}
+
+#game-log h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+#log-list {
+    list-style: none;
+    padding: 0;
+    margin: 10px 0 0 0;
+}
+
+#log-list li {
+    font-size: 14px;
+    margin-bottom: 5px;
+}

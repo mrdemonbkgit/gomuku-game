@@ -17,11 +17,29 @@
                 </label>
                 <span class="ai-label">Play vs AI</span>
             </div>
-            <div id="board-evaluation" class="evaluation">Board Evaluation: 0</div>
+            <div class="color-toggle-container">
+                <span>Play as: </span>
+                <div class="color-select-container">
+                    <label>
+                        <input type="radio" name="player-color" value="black" checked>
+                        Black
+                    </label>
+                    <label>
+                        <input type="radio" name="player-color" value="white">
+                        White
+                    </label>
+                </div>
+            </div>
         </div>
-        <div id="board"></div>
+        <div class="board-log-container">
+            <div id="board"></div>
+            <div id="game-log" class="game-log">
+                <h3>Game Log</h3>
+                <ul id="log-list"></ul>
+            </div>
+        </div>
+        <div id="board-evaluation">Board Evaluation: 0</div>
     </div>
-    
     <script src="script.js"></script>
 </body>
 </html>

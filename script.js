@@ -7,14 +7,119 @@ let lastMoveStone = null;
 let currentPlayer = BLACK;
 let board = [];
 let isAIMode = false;
+let playerIsWhite = false;
+let aiTurn = false;
+
+let logListElement = document.getElementById('log-list');
 
 const boardElement = document.getElementById('board');
-const resetButton = document.getElementById('reset-btn');
 const aiToggle = document.getElementById('ai-toggle');
+
+const openingBook = [
+    // Center opening
+    { moves: [[7, 7]], score: 100 },
+    { moves: [[7, 7], [7, 8], [8, 7]], score: 95 },
+    { moves: [[7, 7], [8, 8], [6, 6]], score: 90 },
+    { moves: [[7, 7], [8, 7], [7, 8]], score: 95 },
+    { moves: [[7, 7], [7, 6], [8, 7]], score: 85 },
+    { moves: [[7, 7], [6, 7], [7, 8]], score: 80 },
+
+    // Slightly off-center openings
+    { moves: [[7, 6]], score: 85 },
+    { moves: [[7, 8]], score: 85 },
+    { moves: [[6, 7]], score: 85 },
+    { moves: [[8, 7]], score: 85 },
+
+    // Diagonal openings
+    { moves: [[7, 7], [8, 8], [6, 6], [9, 9]], score: 88 },
+    { moves: [[7, 7], [6, 6], [8, 8], [5, 5]], score: 86 },
+    { moves: [[7, 7], [8, 6], [6, 8], [9, 5]], score: 87 },
+    { moves: [[7, 7], [6, 8], [8, 6], [5, 9]], score: 85 },
+
+    // Extended sequences
+    { moves: [[7, 7], [7, 8], [8, 7], [8, 8], [6, 6]], score: 92 },
+    { moves: [[7, 7], [8, 7], [7, 8], [6, 7], [9, 7]], score: 91 },
+    { moves: [[7, 7], [7, 8], [7, 6], [8, 7], [6, 7]], score: 89 },
+    { moves: [[7, 7], [8, 8], [6, 6], [9, 9], [5, 5]], score: 88 },
+
+    // Defensive openings
+    { moves: [[7, 7], [7, 8], [7, 6]], score: 82 },
+    { moves: [[7, 7], [8, 7], [6, 7]], score: 81 },
+    { moves: [[7, 7], [8, 8], [6, 6], [8, 6]], score: 84 },
+    { moves: [[7, 7], [6, 6], [8, 8], [6, 8]], score: 83 },
+
+    // Aggressive openings
+    { moves: [[7, 7], [7, 8], [8, 7], [9, 6]], score: 86 },
+    { moves: [[7, 7], [8, 7], [7, 8], [6, 9]], score: 85 },
+    { moves: [[7, 7], [7, 6], [8, 7], [9, 8]], score: 87 },
+    { moves: [[7, 7], [6, 7], [7, 8], [8, 9]], score: 84 },
+
+    // Alternative center approaches
+    { moves: [[7, 7], [8, 8], [7, 9]], score: 88 },
+    { moves: [[7, 7], [6, 6], [5, 7]], score: 87 },
+    { moves: [[7, 7], [8, 6], [9, 5]], score: 86 },
+    { moves: [[7, 7], [6, 8], [5, 9]], score: 85 },
+
+    // Complex patterns
+    { moves: [[7, 7], [7, 8], [8, 7], [8, 8], [6, 6], [9, 9]], score: 93 },
+    { moves: [[7, 7], [8, 7], [7, 8], [6, 7], [9, 7], [5, 7]], score: 92 },
+    { moves: [[7, 7], [7, 8], [7, 6], [8, 7], [6, 7], [9, 7]], score: 91 },
+    { moves: [[7, 7], [8, 8], [6, 6], [9, 9], [5, 5], [10, 10]], score: 90 },
+];
+
+function getOpeningMove() {
+    const logItem = document.createElement('li');
+    logItem.textContent = "AI: Checking opening book...";
+    logListElement.appendChild(logItem);
+
+    const currentBoardState = board.flat().filter(cell => cell !== EMPTY).length;
+    const matchingOpenings = openingBook.filter(opening => 
+        matchesOpeningLoosely(opening.moves.slice(0, currentBoardState))
+    );
+    
+    if (matchingOpenings.length > 0) {
+        // Add a small random factor to the score
+        const randomFactor = 5; // Adjust this value to change the randomness
+        const openingWithRandomScore = matchingOpenings.map(opening => ({
+            ...opening,
+            randomScore: opening.score + Math.random() * randomFactor
+        }));
+
+        // Sort by the random score and select the top one
+        openingWithRandomScore.sort((a, b) => b.randomScore - a.randomScore);
+        const selectedOpening = openingWithRandomScore[0];
+
+        const nextMove = selectedOpening.moves[currentBoardState];
+        if (nextMove) {
+            logItem.textContent += " Found suitable opening move.";
+            return { row: nextMove[0], col: nextMove[1], score: selectedOpening.score };
+        }
+    }
+    
+    logItem.textContent += " No suitable opening move found.";
+    return null;
+}
+
+function matchesOpening(moves) {
+    return moves.every((move, index) => 
+        board[move[0]][move[1]] === (index % 2 === 0 ? BLACK : WHITE)
+    );
+}
+
+function matchesOpeningLoosely(moves) {
+    return moves.every((move, index) => {
+        const [row, col] = move;
+        const playerStone = board[row][col];
+        const expectedStone = index % 2 === 0 ? BLACK : WHITE;
+        return playerStone === expectedStone || playerStone === EMPTY;
+    });
+}
 
 function initializeBoard() {
     board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(EMPTY));
     renderBoard();
+    logListElement.innerHTML = '';  // Clear the log
+    logGameStart();  // Log the initial game start
 }
 
 function renderBoard() {
@@ -63,19 +168,12 @@ function isStarPoint(row, col) {
 }
 
 function handleCellClick(event) {
-    if (isAIMode && currentPlayer === WHITE) return; // Prevent clicks during AI turn
-
     const cell = event.target;
     const row = parseInt(cell.dataset.row);
     const col = parseInt(cell.dataset.col);
 
-    if (board[row][col] === EMPTY) {
+    if (board[row][col] === EMPTY && (!isAIMode || !aiTurn)) {
         placeStone(row, col);
-        
-        if (isAIMode && !checkWin(row, col)) {
-            currentPlayer = WHITE;
-            setTimeout(makeAIMove, 500); // Delay AI move for better UX
-        }
     }
 }
 
@@ -102,23 +200,96 @@ function placeStone(row, col) {
     stone.classList.add('last-move');
     lastMoveStone = stone;
 
-    // Update board evaluation
-    updateBoardEvaluation();
+    // Log the move
+    logMove(row, col);
 
     if (checkWin(row, col)) {
         setTimeout(() => {
             alert(`Player ${currentPlayer === BLACK ? 'Black' : 'White'} wins!`);
-            resetGame();
+            resetGame(true);
         }, 100);
     } else {
         currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+        updateBoardEvaluation();
+        
+        if (isAIMode) {
+            aiTurn = !aiTurn;
+            if (aiTurn) {
+                setTimeout(makeAIMove, 500);
+            }
+        }
     }
 }
 
+function logGameStart() {
+    const logItem = document.createElement('li');
+    logItem.textContent = "New game started";
+    if (isAIMode) {
+        logItem.textContent += playerIsWhite ? " - Player (White) vs AI (Black)" : " - Player (Black) vs AI (White)";
+    } else {
+        logItem.textContent += " - Player vs Player";
+    }
+    logListElement.appendChild(logItem);
+    logListElement.scrollTop = logListElement.scrollHeight;
+}
+
+function logAIMove(moveType, row, col) {
+    const logItem = document.createElement('li');
+    logItem.textContent = `AI (${currentPlayer === BLACK ? 'Black' : 'White'}) ${moveType} at (${row + 1}, ${col + 1})`;
+    logListElement.appendChild(logItem);
+    logListElement.scrollTop = logListElement.scrollHeight;
+}
+
+function logMove(row, col) {
+    const playerColor = currentPlayer === BLACK ? 'Black' : 'White';
+    const logItem = document.createElement('li');
+    logItem.textContent = `${playerColor} placed stone at (${row + 1}, ${col + 1})`;
+    logListElement.appendChild(logItem);
+
+    // Scroll to the bottom of the log
+    logListElement.scrollTop = logListElement.scrollHeight;
+}
+
 function makeAIMove() {
-    const depth = 3; // Adjust this for difficulty (higher is harder but slower)
-    const bestMove = minimax(depth, WHITE, -Infinity, Infinity);
-    placeStone(bestMove.row, bestMove.col);
+    const logItem = document.createElement('li');
+    logItem.textContent = "AI: Deciding on move...";
+    logListElement.appendChild(logItem);
+
+    const openingMove = getOpeningMove();
+    let move;
+    
+    if (openingMove) {
+        move = openingMove;
+        logAIMove("used opening book move", move.row, move.col);
+    } else {
+        logItem.textContent = "AI: No suitable opening move found, using minimax algorithm";
+        logListElement.appendChild(logItem);
+
+        const moveCount = board.flat().filter(cell => cell !== EMPTY).length;
+        const depth = moveCount < 6 ? 2 : 2; // Use deeper search for early game
+        move = minimax(depth, currentPlayer, -Infinity, Infinity);
+        logAIMove("used minimax algorithm", move.row, move.col);
+    }
+
+    if (!move && board.flat().filter(cell => cell !== EMPTY).length === 1) {
+        // If it's the first AI move and no move was found, play near the player's stone
+        const playerMove = board.flat().indexOf(BLACK);
+        const playerRow = Math.floor(playerMove / BOARD_SIZE);
+        const playerCol = playerMove % BOARD_SIZE;
+        const possibleMoves = [
+            [playerRow - 1, playerCol], [playerRow + 1, playerCol],
+            [playerRow, playerCol - 1], [playerRow, playerCol + 1],
+            [playerRow - 1, playerCol - 1], [playerRow - 1, playerCol + 1],
+            [playerRow + 1, playerCol - 1], [playerRow + 1, playerCol + 1]
+        ];
+        move = possibleMoves.find(([r, c]) => r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE);
+        logAIMove("used first move heuristic", move[0], move[1]);
+    }
+
+    if (move) {
+        placeStone(move.row, move.col);
+    }
+    aiTurn = false;
 }
 
 function minimax(depth, player, alpha, beta) {
@@ -127,42 +298,122 @@ function minimax(depth, player, alpha, beta) {
     }
 
     let bestMove = player === WHITE ? { score: -Infinity } : { score: Infinity };
+    const moves = getPrioritizedMoves();
 
-    for (let i = 0; i < BOARD_SIZE; i++) {
-        for (let j = 0; j < BOARD_SIZE; j++) {
-            if (board[i][j] === EMPTY) {
-                board[i][j] = player;
-                let score;
+    const logItem = document.createElement('li');
+    logItem.textContent = `Minimax (depth ${depth}, player ${player === WHITE ? 'White' : 'Black'}):`;
+    logListElement.appendChild(logItem);
 
-                if (checkWin(i, j)) {
-                    score = player === WHITE ? 10000 : -10000;
-                } else {
-                    const nextPlayer = player === WHITE ? BLACK : WHITE;
-                    score = minimax(depth - 1, nextPlayer, alpha, beta).score;
+    for (const [i, j] of moves) {
+        if (board[i][j] === EMPTY) {
+            board[i][j] = player;
+            let score;
+
+            if (checkWin(i, j)) {
+                score = player === WHITE ? 10000 : -10000;
+            } else {
+                const nextPlayer = player === WHITE ? BLACK : WHITE;
+                score = minimax(depth - 1, nextPlayer, alpha, beta).score;
+            }
+
+            board[i][j] = EMPTY;
+
+            const moveLogItem = document.createElement('li');
+            moveLogItem.textContent = `  Evaluating move (${i + 1},${j + 1}) - Score: ${score}`;
+            logListElement.appendChild(moveLogItem);
+
+            if (player === WHITE) {
+                if (score > bestMove.score) {
+                    bestMove = { row: i, col: j, score: score };
                 }
-
-                board[i][j] = EMPTY;
-
-                if (player === WHITE) {
-                    if (score > bestMove.score) {
-                        bestMove = { row: i, col: j, score: score };
-                    }
-                    alpha = Math.max(alpha, score);
-                } else {
-                    if (score < bestMove.score) {
-                        bestMove = { row: i, col: j, score: score };
-                    }
-                    beta = Math.min(beta, score);
+                alpha = Math.max(alpha, score);
+            } else {
+                if (score < bestMove.score) {
+                    bestMove = { row: i, col: j, score: score };
                 }
+                beta = Math.min(beta, score);
+            }
 
-                if (beta <= alpha) {
-                    break;
-                }
+            if (beta <= alpha) {
+                const pruneLogItem = document.createElement('li');
+                pruneLogItem.textContent = `  Pruning at (${i + 1},${j + 1})`;
+                logListElement.appendChild(pruneLogItem);
+                break;
             }
         }
     }
 
+    const bestMoveLogItem = document.createElement('li');
+    bestMoveLogItem.textContent = `Best move at depth ${depth}: (${bestMove.row + 1},${bestMove.col + 1}) - Score: ${bestMove.score}`;
+    logListElement.appendChild(bestMoveLogItem);
+
     return bestMove;
+}
+
+function getPrioritizedMoves() {
+    const logItem = document.createElement('li');
+    logItem.textContent = "AI: Calculating prioritized moves...";
+    logListElement.appendChild(logItem);
+
+    const center = Math.floor(BOARD_SIZE / 2);
+    const moves = [];
+    let lastPlayerMove = null;
+
+    // Find the last player move
+    for (let i = BOARD_SIZE - 1; i >= 0; i--) {
+        for (let j = BOARD_SIZE - 1; j >= 0; j--) {
+            if (board[i][j] !== EMPTY && board[i][j] !== currentPlayer) {
+                lastPlayerMove = [i, j];
+                break;
+            }
+        }
+        if (lastPlayerMove) break;
+    }
+
+    // Log the last player move
+    const lastMoveLogItem = document.createElement('li');
+    if (lastPlayerMove) {
+        lastMoveLogItem.textContent = `Last player move: (${lastPlayerMove[0] + 1}, ${lastPlayerMove[1] + 1})`;
+    } else {
+        lastMoveLogItem.textContent = "No last player move found (first move of the game)";
+    }
+    logListElement.appendChild(lastMoveLogItem);
+
+    for (let i = 0; i < BOARD_SIZE; i++) {
+        for (let j = 0; j < BOARD_SIZE; j++) {
+            if (board[i][j] === EMPTY) {
+                let score = 0;
+                const distanceToCenter = Math.max(Math.abs(i - center), Math.abs(j - center));
+                score -= distanceToCenter * 2; // Prefer center
+
+                if (lastPlayerMove) {
+                    const [lastRow, lastCol] = lastPlayerMove;
+                    const distanceToLastMove = Math.max(Math.abs(i - lastRow), Math.abs(j - lastCol));
+                    score -= distanceToLastMove * 3; // Strongly prefer moves near the last player move
+                }
+
+                moves.push([i, j, score]);
+            }
+        }
+    }
+
+    moves.sort((a, b) => b[2] - a[2]); // Sort by score in descending order
+    const prioritizedMoves = moves.map(move => [move[0], move[1], move[2]]);
+
+    // Log all prioritized moves
+    const movesLogItem = document.createElement('li');
+    movesLogItem.textContent = "All prioritized moves:";
+    logListElement.appendChild(movesLogItem);
+
+    const movesList = document.createElement('ul');
+    prioritizedMoves.forEach(([row, col, score]) => {
+        const moveItem = document.createElement('li');
+        moveItem.textContent = `(${row + 1},${col + 1}) - Score: ${score}`;
+        movesList.appendChild(moveItem);
+    });
+    logListElement.appendChild(movesList);
+
+    return prioritizedMoves.map(move => [move[0], move[1]]); // Return without scores
 }
 
 function evaluateBoard() {
@@ -182,19 +433,20 @@ function evaluateBoard() {
     // Add positional scoring
     score += evaluatePositionalAdvantage();
 
-    return score;
+    return playerIsWhite ? score : -score;
 }
 
 function evaluatePositionalAdvantage() {
     let score = 0;
     const center = Math.floor(BOARD_SIZE / 2);
+    const moveCount = board.flat().filter(cell => cell !== EMPTY).length;
     
     for (let i = 0; i < BOARD_SIZE; i++) {
         for (let j = 0; j < BOARD_SIZE; j++) {
             if (board[i][j] !== EMPTY) {
-                // Prefer center and near-center positions
+                // Prefer center and near-center positions, especially in early game
                 const distanceToCenter = Math.max(Math.abs(i - center), Math.abs(j - center));
-                const positionScore = 5 - distanceToCenter;
+                const positionScore = (10 - distanceToCenter) * Math.max(1, 20 - moveCount);
                 score += board[i][j] === WHITE ? positionScore : -positionScore;
             }
         }
@@ -250,45 +502,6 @@ function evaluateDirection(row, col, dx, dy) {
     return player === WHITE ? score : -score;
 }
 
-function findBestMove() {
-    // Simple AI: Find the first empty cell that's adjacent to a player's stone
-    for (let i = 0; i < BOARD_SIZE; i++) {
-        for (let j = 0; j < BOARD_SIZE; j++) {
-            if (board[i][j] === EMPTY && hasAdjacentStone(i, j)) {
-                return { row: i, col: j };
-            }
-        }
-    }
-    // If no adjacent moves, place in the center or nearby
-    const center = Math.floor(BOARD_SIZE / 2);
-    for (let i = center - 1; i <= center + 1; i++) {
-        for (let j = center - 1; j <= center + 1; j++) {
-            if (board[i][j] === EMPTY) {
-                return { row: i, col: j };
-            }
-        }
-    }
-    // If center area is filled, choose first empty cell
-    for (let i = 0; i < BOARD_SIZE; i++) {
-        for (let j = 0; j < BOARD_SIZE; j++) {
-            if (board[i][j] === EMPTY) {
-                return { row: i, col: j };
-            }
-        }
-    }
-}
-
-function hasAdjacentStone(row, col) {
-    for (let i = Math.max(0, row - 1); i <= Math.min(BOARD_SIZE - 1, row + 1); i++) {
-        for (let j = Math.max(0, col - 1); j <= Math.min(BOARD_SIZE - 1, col + 1); j++) {
-            if (board[i][j] !== EMPTY) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 function updateBoardEvaluation() {
     const evaluation = evaluateBoard();
     const evaluationElement = document.getElementById('board-evaluation');
@@ -339,9 +552,10 @@ function countDirection(row, col, dx, dy) {
     return count;
 }
 
-function resetGame() {
+function resetGame(startAIMove = true) {
     board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(EMPTY));
     currentPlayer = BLACK;
+    aiTurn = isAIMode && playerIsWhite;
     
     // Clear the board visually
     boardElement.innerHTML = '';
@@ -355,16 +569,41 @@ function resetGame() {
 
     updateBoardEvaluation();
 
-    if (isAIMode && currentPlayer === WHITE) {
+    // Clear the log and add the game start log
+    logListElement.innerHTML = '';
+    logGameStart();
+
+    if (aiTurn && startAIMove) {
         setTimeout(makeAIMove, 500);
     }
 }
 
-resetButton.addEventListener('click', resetGame);
 
-aiToggle.addEventListener('change', (e) => {
-    isAIMode = e.target.checked;
-    resetGame();
+// Update the event listeners
+document.addEventListener('DOMContentLoaded', (event) => {
+    const aiToggle = document.getElementById('ai-toggle');
+    const colorRadios = document.querySelectorAll('input[name="player-color"]');
+    const resetBtn = document.getElementById('reset-btn');
+
+    aiToggle.addEventListener('change', toggleAI);
+    colorRadios.forEach(radio => radio.addEventListener('change', handleColorChange));
+    resetBtn.addEventListener('click', () => resetGame(true));
+
+    initializeBoard();
 });
 
-initializeBoard();
+function handleColorChange(event) {
+    playerIsWhite = event.target.value === 'white';
+    resetGame(true);
+}
+
+
+function toggleAI(event) {
+    isAIMode = event.target.checked;
+    aiTurn = isAIMode && playerIsWhite;
+    resetGame(!aiTurn);
+
+    if (aiTurn) {
+        setTimeout(makeAIMove, 500);
+    }
+}
