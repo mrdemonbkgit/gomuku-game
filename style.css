@@ -52,3 +52,14 @@ body {
     font-size: 16px;
     cursor: pointer;
 }
+
+#timers {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+#game-timer, #move-timer {
+    font-size: 18px;
+    font-weight: bold;
+}
